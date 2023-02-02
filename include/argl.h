@@ -66,7 +66,7 @@ long argl_string_to_long(const char* string) {
 double argl_string_to_double(const char* string) {
 	double whole_number_part = 0;
 	double decimal_number_part = 0;
-	int number_of_values_after_decimal_point = 0;
+	double after_decimal_dividend = 1;
 	double negative = 1;
 	bool whole = true;
 
@@ -99,11 +99,12 @@ double argl_string_to_double(const char* string) {
 				return 0;
 			}
 			decimal_number_part += string[i] - '0';
-			number_of_values_after_decimal_point++;
+			after_decimal_dividend *= 10;
 		}
 	}
 
-	return whole_number_part + (decimal_number_part / ( number_of_values_after_decimal_point * 10 ));
+	return whole_number_part + (decimal_number_part / ( after_decimal_dividend ));
+
 }
 
 
