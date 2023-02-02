@@ -2,9 +2,12 @@
 
 ## Name
 Following the logic of the C/C++ argument naming convention.
-|argc | argument count  |
-|argv | argument vector |
-|argl | argument library|
+
+| name | meaning           |
+| ---- | ----------------- |
+| argc | argument count    |
+| argv | argument vector   |
+| argl | argument library  |
 
 ## Interface
 argl follows the general design principles of [stb](https://github.com/nothings/stb/blob/master/docs/stb_howto.txt). E.G. ARGL_IMPLEMENTATION must be defined before the last inclusion of `argl.h`.
