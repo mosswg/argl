@@ -344,7 +344,7 @@ namespace argl {
 
 					return_value = 1;
 				}
-				current_arg_value = argv[i++];
+				current_arg_value = argv[++i];
 
 				current.set_value(current_arg_value);
 			}
@@ -601,7 +601,7 @@ int argl_parse_arguments(int argc, char** argv) {
 
 				return_value = 1;
 			}
-			current_arg_value = argv[i++];
+			current_arg_value = argv[++i];
 
 			argl_argument_set_value(current, current_arg_value);
 		}
