@@ -198,7 +198,9 @@ namespace argl {
 				this->type = argl_INVALID;
 			}
 
+			void set_value(std::string str);
 
+#ifndef ARGL_NO_C
 			argument operator=(argl_argument c_style_arg) {
 				this->value = c_style_arg.value;
 				this->type = c_style_arg.type;
@@ -206,8 +208,7 @@ namespace argl {
 				this->shorthand = c_style_arg.shorthand;
 				return *this;
 			}
-
-			void set_value(std::string str);
+#endif
 	};
 
 	std::vector<argument> cpp_arguments;
@@ -289,6 +290,8 @@ namespace argl {
 				}
 
 				current.type = argl_INVALID;
+
+#ifndef ARGL_NO_C
 				for (int argument_index = 0; argument_index < number_of_c_arguments; argument_index++) {
 					auto arg = arguments[argument_index];
 					if (current_arg_is_shorthand) {
@@ -304,6 +307,7 @@ namespace argl {
 						}
 					}
 				}
+#endif
 
 				for (auto& arg : cpp_arguments) {
 					if (current_arg_is_shorthand) {
