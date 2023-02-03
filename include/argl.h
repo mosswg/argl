@@ -136,6 +136,8 @@ typedef struct {
 	argl_argument_type type;
 	char* name;
 	char* shorthand;
+	bool set = false;
+	bool required = false;
 } argl_argument;
 
 static char ARGL_EMPTY_STRING[1] = {0};
@@ -156,8 +158,10 @@ namespace argl {
 			argl_argument_type type;
 			std::string name;
 			std::string shorthand;
+			bool set = false;
+			bool required = false;
 
-			argument(char** value, std::string& name, std::string& shorthand, char* default_value = 0) : name(name), shorthand(shorthand) {
+			argument(char** value, const std::string& name, const std::string& shorthand, char* default_value = 0) : name(name), shorthand(shorthand) {
 				this->value = value;
 				if (default_value) {
 					for (int i = 0; default_value[i]; i++) {
@@ -172,29 +176,61 @@ namespace argl {
 				this->type = argl_string;
 			}
 
-			argument(std::string* value, std::string& name, std::string& shorthand, const std::string& default_value = ARGL_STRING_DEFAULT) : name(name), shorthand(shorthand) {
+			argument(std::string* value, const std::string& name, const std::string& shorthand, const std::string& default_value = ARGL_STRING_DEFAULT) : name(name), shorthand(shorthand) {
 				this->value = value;
 				*value = default_value;
 				this->type = argl_string;
 			}
 
-			argument(long* value, std::string& name, std::string& shorthand, long default_value = ARGL_LONG_DEFAULT) : name(name), shorthand(shorthand) {
+			argument(long* value, const std::string& name, const std::string& shorthand, long default_value = ARGL_LONG_DEFAULT) : name(name), shorthand(shorthand) {
 				this->value = value;
 				*value = default_value;
 				this->type = argl_long;
 			}
 
-			argument(double* value, std::string& name, std::string& shorthand, double default_value = ARGL_DOUBLE_DEFAULT) : name(name), shorthand(shorthand) {
+			argument(double* value, const std::string& name, const std::string& shorthand, double default_value = ARGL_DOUBLE_DEFAULT) : name(name), shorthand(shorthand) {
 				this->value = value;
 				*value = default_value;
 				this->type = argl_double;
 			}
 
-			argument(bool* value, std::string& name, std::string& shorthand, bool default_value = ARGL_BOOL_DEFAULT) : name(name), shorthand(shorthand) {
+			argument(bool* value, const std::string& name, const std::string& shorthand, bool default_value = ARGL_BOOL_DEFAULT) : name(name), shorthand(shorthand) {
 				this->value = value;
 				*value = default_value;
 				this->type = argl_bool;
 			}
+
+
+			argument(char** value, const std::string& description) : name(description) {
+				this->value = value;
+				for (int i = 0; ARGL_STRING_DEFAULT[i]; i++) {
+					(*value)[i] = ARGL_STRING_DEFAULT[i];
+				}
+				this->required = true;
+				this->type = argl_string;
+			}
+
+			argument(std::string* value, const std::string& description) : name(description) {
+				this->value = value;
+				*value = ARGL_STRING_DEFAULT;
+				this->required = true;
+				this->type = argl_string;
+			}
+
+			argument(long* value, const std::string& description) : name(description) {
+				this->value = value;
+				*value = ARGL_LONG_DEFAULT;
+				this->required = true;
+				this->type = argl_long;
+			}
+
+			argument(double* value, const std::string& description) : name(description) {
+				this->value = value;
+				*value = ARGL_DOUBLE_DEFAULT;
+				this->required = true;
+				this->type = argl_double;
+			}
+
 
 			argument() {
 				this->value = nullptr;
@@ -215,6 +251,8 @@ namespace argl {
 	};
 
 	std::vector<argument> cpp_arguments;
+	bool has_optional_argument = false;
+	bool has_required_argument = false;
 }
 #endif // cpp
 
@@ -223,6 +261,9 @@ namespace argl {
 
 #ifdef __cplusplus
 namespace argl {
+	template <class t>
+		void register_required_argument(t* value, const std::string& description);
+
 	template <class t>
 		void register_argument(t* value, std::string name);
 
@@ -237,25 +278,37 @@ namespace argl {
 
 	int parse_arguments(int argc, char** argv);
 
+	void print_usage(int argc, char** argv);
+
 #ifdef ARGL_IMPLEMENTATION
 
 	template <class t>
+		void register_required_argument(t& value, const std::string& description) {
+			has_required_argument = true;
+			cpp_arguments.emplace_back(&value, description);
+		}
+
+	template <class t>
 		void register_argument(t& value, std::string name) {
+			has_optional_argument = true;
 			cpp_arguments.emplace_back(&value, name, "");
 		}
 
 	template <class t>
 		void register_argument(t& value, std::string name, std::string shorthand) {
+			has_optional_argument = true;
 			cpp_arguments.emplace_back(&value, name, shorthand);
 		}
 
 	template <class t>
 		void register_argument(t& value, std::string name, t default_value) {
+			has_optional_argument = true;
 			cpp_arguments.emplace_back(&value, name, "", default_value);
 		}
 
 	template <class t>
 		void register_argument(t& value, std::string name, std::string shorthand, t default_value) {
+			has_optional_argument = true;
 			cpp_arguments.emplace_back(&value, name, shorthand, default_value);
 		}
 
@@ -267,96 +320,200 @@ namespace argl {
 		int return_value = 0;
 
 		/// TODO: Rename these. this is terrible.
-		char* current_arg;
+		char* current_argv_value;
 		std::string current_arg_name;
 		bool current_arg_is_shorthand;
 		std::string current_arg_value;
-		argl::argument current;
-		for (int i = 0; i < argc; i++) {
-			current_arg = argv[i];
+		argl::argument current_arg;
 
-			if (current_arg[0] != 0 && current_arg[1] != 0 && current_arg[0] == '-') {
-				if (current_arg[1] == '-') {
+		/// Starting at 1 to skip ./<progam> or however the program is called.
+		for (int i = 1; i < argc; i++) {
+			current_argv_value = argv[i];
 
-					if (current_arg[2] == 0) {
-						// Ignore any arguments that are just "--".
+
+
+			/// This looks really weird but all it does is:
+			/// If ARGL_DISABLE_HELP is defined: nothing
+			/// If ARGL_DISABLE_HELP_SHORTHAND is defined but ARGL_DISABLE_HELP is not: check if argv[i] is "--help"
+			/// If neither ARGL_DISABLE_HELP or ARGL_DISABLE_HELP_SHORTHAND is defined: check if argv[i] is "--help" or "-h"
+#ifndef ARGL_DISABLE_HELP
+			if (argl_string_equal(current_argv_value, "--help")
+#ifndef ARGL_DISABLE_HELP_SHORTHAND
+					|| argl_string_equal(current_argv_value, "-h")
+#endif
+			   ) {
+				argl::print_usage(argc, argv);
+				exit(0);
+			}
+
+#endif
+
+
+			if (current_argv_value[0] != 0) {
+				if (current_argv_value[0] == '-' && current_argv_value[1] != 0) {
+					if (current_argv_value[1] == '-') {
+
+						if (current_argv_value[2] == 0) {
+							// Ignore any arguments that are just "--".
+							continue;
+						}
+
+						// name is everything after the double dash
+						current_arg_name = std::string(current_argv_value + 2);
+					}
+					else {
+						// shorthand is everything after the dash
+						current_arg_name = std::string(current_argv_value + 1);
+						current_arg_is_shorthand = true;
+					}
+
+					current_arg.type = argl_INVALID;
+
+#ifndef ARGL_NO_C
+					for (int argument_index = 0; argument_index < number_of_c_arguments; argument_index++) {
+						auto arg = arguments[argument_index];
+						if (current_arg_is_shorthand) {
+							if (argl_string_equal(arg.shorthand, current_arg_name.c_str())) {
+								current_arg = arg;
+								break;
+							}
+						}
+						else {
+							if (argl_string_equal(arg.name, current_arg_name.c_str())) {
+								current_arg = arg;
+								break;
+							}
+						}
+					}
+#endif
+
+					for (auto& arg : cpp_arguments) {
+						if (arg.required) {
+							continue;
+						}
+
+						if (current_arg_is_shorthand) {
+							if (arg.shorthand == current_arg_name) {
+								current_arg = arg;
+								break;
+							}
+						}
+						else {
+							if (arg.name == current_arg_name) {
+								current_arg = arg;
+								break;
+							}
+						}
+					}
+
+					if (current_arg.type == argl_INVALID) {
 						continue;
 					}
 
-					// name is everything after the double dash
-					current_arg_name = std::string(current_arg + 2);
+					if (current_arg.type == argl_bool) {
+						*((bool*)current_arg.value) = !ARGL_BOOL_DEFAULT;
+						continue;
+					}
+
+					// If this is the last argument
+					if (argc == i + 1) {
+						if (current_arg_is_shorthand) {
+							std::cerr << "argl error: -" << current_arg.shorthand << " requires a value.\n";
+						}
+						else {
+							std::cerr << "argl error --" << current_arg.name << " requires a value.\n";
+						}
+
+						return_value = 1;
+					}
+					current_arg_value = argv[++i];
+
+					current_arg.set_value(current_arg_value);
 				}
 				else {
-					// shorthand is everything after the dash
-					current_arg_name = std::string(current_arg + 1);
-					current_arg_is_shorthand = true;
-				}
+					// Arguments not prefixed with '--'. These do not suppert boolean arguments so we do not bother checking.
 
-				current.type = argl_INVALID;
-
+					current_arg.type = argl_INVALID;
 #ifndef ARGL_NO_C
-				for (int argument_index = 0; argument_index < number_of_c_arguments; argument_index++) {
-					auto arg = arguments[argument_index];
-					if (current_arg_is_shorthand) {
-						if (argl_string_equal(arg.shorthand, current_arg_name.c_str())) {
-							current = arg;
-							break;
+					for (int argument_index = 0; argument_index < number_of_c_arguments; argument_index++) {
+						auto arg = arguments[argument_index];
+						if (arg.required && !arg.set) {
+								current_arg = arg;
+								arg.set = true;
+								break;
 						}
 					}
-					else {
-						if (argl_string_equal(arg.name, current_arg_name.c_str())) {
-							current = arg;
-							break;
-						}
-					}
-				}
 #endif
 
-				for (auto& arg : cpp_arguments) {
-					if (current_arg_is_shorthand) {
-						if (arg.shorthand == current_arg_name) {
-							current = arg;
+					for (auto& arg : cpp_arguments) {
+						if (arg.required && !arg.set) {
+							current_arg = arg;
+							arg.set = true;
 							break;
 						}
 					}
-					else {
-						if (arg.name == current_arg_name) {
-							current = arg;
-							break;
-						}
-					}
-				}
 
-				if (current.type == argl_INVALID) {
-					continue;
-				}
-
-				if (current.type == argl_bool) {
-					*((bool*)current.value) = !ARGL_BOOL_DEFAULT;
-					continue;
-				}
-
-				// If this is the last argument
-				if (argc == i + 1) {
-					if (current_arg_is_shorthand) {
-						std::cerr << "argl error: -" << current.shorthand << " requires a value.\n";
-					}
-					else {
-						std::cerr << "argl error --" << current.name << " requires a value.\n";
+					if (current_arg.type == argl_INVALID) {
+						fprintf(stderr, "argl error: unknown argument: %s\n", current_argv_value);
+						exit(1);
 					}
 
-					return_value = 1;
+					current_arg.set_value(current_argv_value);
 				}
-				current_arg_value = argv[++i];
-
-				current.set_value(current_arg_value);
-			}
-			else {
-				// Were only concerned with stuff that starts with '-' or '--'.
-				continue;
 			}
 		}
+
+		for (auto& arg : cpp_arguments) {
+			if (arg.required && !arg.set) {
+				argl::print_usage(argc, argv);
+				exit(1);
+			}
+		}
+
 		return return_value;
+	}
+
+
+	void print_usage(int argc, char** argv) {
+		std::string usage = "Usage: ";
+		usage += argv[0];
+
+		if (has_optional_argument) {
+			usage += " <options>";
+		}
+
+		if (has_required_argument) {
+			usage += " ";
+			for (auto& arg : cpp_arguments) {
+				if (arg.required) {
+					usage += arg.name + " ";
+				}
+			}
+		}
+
+		if (!has_optional_argument) {
+			std::cout << usage << "\n";
+			return;
+		}
+
+		if (has_required_argument) {
+			usage += "<options>";
+		}
+		usage += "\nOptions:\n";
+
+		for (auto& arg : cpp_arguments) {
+			if (arg.required) {
+				continue;
+			}
+
+			usage += "\t--" + arg.name;
+			if (arg.shorthand != "") {
+				usage += "\t-" + arg.shorthand;
+			}
+			usage += "\n";
+		}
+
+		std::cout << usage;
 	}
 
 
