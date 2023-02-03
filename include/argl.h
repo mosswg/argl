@@ -138,6 +138,8 @@ typedef struct {
 	char* shorthand;
 } argl_argument;
 
+static char ARGL_EMPTY_STRING[1] = {0};
+
 static int number_of_c_arguments = 0;
 static argl_argument arguments[500];
 #endif // no c
@@ -415,7 +417,7 @@ void argl_register_string_argument(char** value, char* name) {
 	arg->value = value;
 	arg->type = argl_string;
 	arg->name = name;
-	arg->shorthand = "";
+	arg->shorthand = ARGL_EMPTY_STRING;
 
 	number_of_c_arguments++;
 }
@@ -441,7 +443,7 @@ void argl_register_long_argument(long* value, char* name) {
 	arg->value = value;
 	arg->type = argl_long;
 	arg->name = name;
-	arg->shorthand = "";
+	arg->shorthand = ARGL_EMPTY_STRING;
 
 	number_of_c_arguments++;
 }
@@ -467,7 +469,7 @@ void argl_register_double_argument(double* value, char* name) {
 	arg->value = value;
 	arg->type = argl_double;
 	arg->name = name;
-	arg->shorthand = "";
+	arg->shorthand = ARGL_EMPTY_STRING;
 
 	number_of_c_arguments++;
 }
@@ -493,7 +495,7 @@ void argl_register_bool_argument(bool* value, char* name) {
 	arg->value = value;
 	arg->type = argl_bool;
 	arg->name = name;
-	arg->shorthand = "";
+	arg->shorthand = ARGL_EMPTY_STRING;
 
 	number_of_c_arguments++;
 }
