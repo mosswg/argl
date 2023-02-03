@@ -136,8 +136,8 @@ typedef struct {
 	argl_argument_type type;
 	char* name;
 	char* shorthand;
-	bool set = false;
-	bool required = false;
+	bool set;
+	bool required;
 } argl_argument;
 
 static char ARGL_EMPTY_STRING[1] = {0};
@@ -575,6 +575,8 @@ void argl_register_string_argument(char** value, char* name) {
 	arg->type = argl_string;
 	arg->name = name;
 	arg->shorthand = ARGL_EMPTY_STRING;
+	arg->required = false;
+	arg->set = false;
 
 	number_of_c_arguments++;
 }
@@ -588,6 +590,8 @@ void argl_register_string_argument_with_shorthand(char** value, char* name, char
 	arg->type = argl_string;
 	arg->name = name;
 	arg->shorthand = shorthand;
+	arg->required = false;
+	arg->set = false;
 
 	number_of_c_arguments++;
 }
@@ -601,6 +605,8 @@ void argl_register_long_argument(long* value, char* name) {
 	arg->type = argl_long;
 	arg->name = name;
 	arg->shorthand = ARGL_EMPTY_STRING;
+	arg->required = false;
+	arg->set = false;
 
 	number_of_c_arguments++;
 }
@@ -614,6 +620,8 @@ void argl_register_long_argument_with_shorthand(long* value, char* name, char* s
 	arg->type = argl_long;
 	arg->name = name;
 	arg->shorthand = shorthand;
+	arg->required = false;
+	arg->set = false;
 
 	number_of_c_arguments++;
 }
@@ -627,6 +635,8 @@ void argl_register_double_argument(double* value, char* name) {
 	arg->type = argl_double;
 	arg->name = name;
 	arg->shorthand = ARGL_EMPTY_STRING;
+	arg->required = false;
+	arg->set = false;
 
 	number_of_c_arguments++;
 }
@@ -640,6 +650,8 @@ void argl_register_double_argument_with_shorthand(double* value, char* name, cha
 	arg->type = argl_double;
 	arg->name = name;
 	arg->shorthand = shorthand;
+	arg->required = false;
+	arg->set = false;
 
 	number_of_c_arguments++;
 }
@@ -653,6 +665,8 @@ void argl_register_bool_argument(bool* value, char* name) {
 	arg->type = argl_bool;
 	arg->name = name;
 	arg->shorthand = ARGL_EMPTY_STRING;
+	arg->required = false;
+	arg->set = false;
 
 	number_of_c_arguments++;
 }
@@ -666,6 +680,8 @@ void argl_register_bool_argument_with_shorthand(bool* value, char* name, char* s
 	arg->type = argl_bool;
 	arg->name = name;
 	arg->shorthand = shorthand;
+	arg->required = false;
+	arg->set = false;
 
 	number_of_c_arguments++;
 }
