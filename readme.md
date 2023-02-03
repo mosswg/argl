@@ -29,6 +29,36 @@ int main(int argc, char** argv) {
     argl::parse_arguments(argc, argv);
 }
 ```
+This can be use as: `./<program> -v <value>`, `./<program> --value <value>`, or `./<program>`. With the last use outputting the [default](#defaults) of `0`.
+
+Required arguments can also be added (currently only for c++). With the `argl::register_required_argument(<type>& value, std::string description)` function. If required arguments are not provided argl will print an auto-generated [usage](#Usage) message. For example the same program as before with the long as a required argument:
+
+```cpp
+
+#define ARGL_IMPLEMENTATION
+#include "argl.h"
+
+int main(int argc, char** argv) {
+    long value;
+    argl::register_required_argument(value, "value");
+
+    argl::parse_arguments(argc, argv);
+}
+```
+
+#### Usage
+Usage is printed when any required argument is not provided or when `--help` or `-h` is provided. The optional arguments to print usage can be disabled with `ARGL_DISABLE_HELP_SHORTHAND` and `ARGL_DISABLE_HELP`. `ARGL_DISABLE_HELP` will disable both `--help` and `-h`. There is currently no way to disable `--help` while keeping `-h` active.
+
+
+### Defaults
+All arguments are given a default. The default of an argument can be set with the last parameter of `argl::register_argument`. If no default is provided then the default value is used from precompiler macro:
+
+| name                   | default value |
+| ---------------------- | ------------- |
+| ARGL_STRING_DEFAULT    | ""            |
+| ARGL_LONG_DEFAULT      | 0             |
+| ARGL_DOUBLE_DEFAULT    | 0             |
+| ARGL_BOOL_DEFAULT      | false         |
 
 ### C
 Arguments are registered with the `argl_register_<type>_argument(<type>& value, char* name)` or `argl_register_<type>_argument_with_shorthand(<type>& value, char* name, char* shorthand)`. The arguments are parsed with `argl_parse_argument`. For example to parse a long with the name `value` and shorthand `v`:
@@ -44,3 +74,4 @@ int main(int argc, char** argv) {
     argl_parse_arguments(argc, argv);
 }
 ```
+
