@@ -141,7 +141,6 @@ typedef struct {
 } argl_argument;
 
 static char ARGL_EMPTY_STRING[1] = {0};
-
 static int number_of_c_arguments = 0;
 static argl_argument arguments[500];
 #endif // no c
@@ -158,10 +157,11 @@ namespace argl {
 			argl_argument_type type;
 			std::string name;
 			std::string shorthand;
+			std::string description;
 			bool set = false;
 			bool required = false;
 
-			argument(char** value, const std::string& name, const std::string& shorthand, char* default_value = 0) : name(name), shorthand(shorthand) {
+			argument(char** value, const std::string& name, const std::string& shorthand, const std::string& description, char* default_value = 0) : name(name), shorthand(shorthand), description(description) {
 				this->value = value;
 				if (default_value) {
 					for (int i = 0; default_value[i]; i++) {
@@ -176,32 +176,32 @@ namespace argl {
 				this->type = argl_string;
 			}
 
-			argument(std::string* value, const std::string& name, const std::string& shorthand, const std::string& default_value = ARGL_STRING_DEFAULT) : name(name), shorthand(shorthand) {
+			argument(std::string* value, const std::string& name, const std::string& shorthand, const std::string& description, const std::string& default_value = ARGL_STRING_DEFAULT) : name(name), shorthand(shorthand), description(description) {
 				this->value = value;
 				*value = default_value;
 				this->type = argl_string;
 			}
 
-			argument(long* value, const std::string& name, const std::string& shorthand, long default_value = ARGL_LONG_DEFAULT) : name(name), shorthand(shorthand) {
+			argument(long* value, const std::string& name, const std::string& shorthand, const std::string& description, long default_value = ARGL_LONG_DEFAULT) : name(name), shorthand(shorthand), description(description) {
 				this->value = value;
 				*value = default_value;
 				this->type = argl_long;
 			}
 
-			argument(double* value, const std::string& name, const std::string& shorthand, double default_value = ARGL_DOUBLE_DEFAULT) : name(name), shorthand(shorthand) {
+			argument(double* value, const std::string& name, const std::string& shorthand, const std::string& description, double default_value = ARGL_DOUBLE_DEFAULT) : name(name), shorthand(shorthand), description(description) {
 				this->value = value;
 				*value = default_value;
 				this->type = argl_double;
 			}
 
-			argument(bool* value, const std::string& name, const std::string& shorthand, bool default_value = ARGL_BOOL_DEFAULT) : name(name), shorthand(shorthand) {
+			argument(bool* value, const std::string& name, const std::string& shorthand, const std::string& description, bool default_value = ARGL_BOOL_DEFAULT) : name(name), shorthand(shorthand), description(description) {
 				this->value = value;
 				*value = default_value;
 				this->type = argl_bool;
 			}
 
 
-			argument(char** value, const std::string& description) : name(description) {
+			argument(char** value, const std::string& name) : name(name) {
 				this->value = value;
 				for (int i = 0; ARGL_STRING_DEFAULT[i]; i++) {
 					(*value)[i] = ARGL_STRING_DEFAULT[i];
@@ -210,21 +210,21 @@ namespace argl {
 				this->type = argl_string;
 			}
 
-			argument(std::string* value, const std::string& description) : name(description) {
+			argument(std::string* value, const std::string& name) : name(name) {
 				this->value = value;
 				*value = ARGL_STRING_DEFAULT;
 				this->required = true;
 				this->type = argl_string;
 			}
 
-			argument(long* value, const std::string& description) : name(description) {
+			argument(long* value, const std::string& name) : name(name) {
 				this->value = value;
 				*value = ARGL_LONG_DEFAULT;
 				this->required = true;
 				this->type = argl_long;
 			}
 
-			argument(double* value, const std::string& description) : name(description) {
+			argument(double* value, const std::string& name) : name(name) {
 				this->value = value;
 				*value = ARGL_DOUBLE_DEFAULT;
 				this->required = true;
@@ -236,6 +236,10 @@ namespace argl {
 				this->value = nullptr;
 				this->type = argl_INVALID;
 			}
+
+			void print_value();
+
+			std::string value_to_string();
 
 			void set_value(std::string str);
 
@@ -253,6 +257,8 @@ namespace argl {
 	std::vector<argument> cpp_arguments;
 	bool has_optional_argument = false;
 	bool has_required_argument = false;
+	long max_argument_length = 0;
+	long max_line_width = 100;
 }
 #endif // cpp
 
@@ -262,54 +268,81 @@ namespace argl {
 #ifdef __cplusplus
 namespace argl {
 	template <class t>
-		void register_required_argument(t* value, const std::string& description);
+		void register_required_argument(t& value, const std::string& name);
 
 	template <class t>
-		void register_argument(t* value, std::string name);
+		void register_argument(t& value, std::string name);
 
 	template <class t>
-		void register_argument(t* value, std::string name, std::string shorthand);
+		void register_argument(t& value, const std::string& name, t default_value);
 
 	template <class t>
-		void register_argument(t* value, std::string name, t default_value);
+		void register_argument(t& value, const std::string& name, const std::string& description);
 
 	template <class t>
-		void register_argument(t* value, std::string name, std::string shorthand, t default_value);
+		void register_argument(t& value, const std::string& name, const std::string& shorthand, const std::string& description);
+
+	template <class t>
+		void register_argument(t& value, const std::string& name, const std::string& shorthand, const std::string& description, t default_value);
 
 	int parse_arguments(int argc, char** argv);
 
 	void print_usage(int argc, char** argv);
 
+	void print_argument_values();
+
 #ifdef ARGL_IMPLEMENTATION
 
 	template <class t>
-		void register_required_argument(t& value, const std::string& description) {
+		void register_required_argument(t& value, const std::string& name) {
 			has_required_argument = true;
-			cpp_arguments.emplace_back(&value, description);
+			cpp_arguments.emplace_back(&value, name);
 		}
 
 	template <class t>
 		void register_argument(t& value, std::string name) {
 			has_optional_argument = true;
-			cpp_arguments.emplace_back(&value, name, "");
+			if ((name.length() + 2) > max_argument_length) {
+				max_argument_length = name.length() + 2;
+			}
+			cpp_arguments.emplace_back(&value, name, "", "");
 		}
 
 	template <class t>
-		void register_argument(t& value, std::string name, std::string shorthand) {
+		void register_argument(t& value, const std::string& name, t default_value) {
 			has_optional_argument = true;
-			cpp_arguments.emplace_back(&value, name, shorthand);
+			if ((name.length() + 2) > max_argument_length) {
+				max_argument_length = name.length() + 2;
+			}
+			cpp_arguments.emplace_back(&value, name, "", "", default_value);
 		}
 
 	template <class t>
-		void register_argument(t& value, std::string name, t default_value) {
+		void register_argument(t& value, const std::string& name, const std::string& description) {
 			has_optional_argument = true;
-			cpp_arguments.emplace_back(&value, name, "", default_value);
+			if ((name.length() + 2) > max_argument_length) {
+				max_argument_length = name.length() + 2;
+			}
+			cpp_arguments.emplace_back(&value, name, "", description);
 		}
 
 	template <class t>
-		void register_argument(t& value, std::string name, std::string shorthand, t default_value) {
+		void register_argument(t& value, const std::string& name, const std::string& shorthand, const std::string& description) {
 			has_optional_argument = true;
-			cpp_arguments.emplace_back(&value, name, shorthand, default_value);
+			if ((name.length() + 2) + (shorthand.length() + 1) > max_argument_length) {
+				max_argument_length = name.length() + 2 + shorthand.length() + 1;
+			}
+			std::cout << "mal: " << max_argument_length << "\n";
+			cpp_arguments.emplace_back(&value, name, shorthand, description);
+		}
+
+	template <class t>
+		void register_argument(t& value, const std::string& name, const std::string& shorthand, const std::string& description, t default_value) {
+			has_optional_argument = true;
+			if ((name.length() + 2) + (shorthand.length() + 1) > max_argument_length) {
+				max_argument_length = name.length() + 2 + shorthand.length() + 1;
+			}
+			cpp_arguments.emplace_back(&value, name, shorthand, description, default_value);
 		}
 
 
@@ -319,7 +352,6 @@ namespace argl {
 	int parse_arguments(int argc, char** argv) {
 		int return_value = 0;
 
-		/// TODO: Rename these. this is terrible.
 		char* current_argv_value;
 		std::string current_arg_name;
 		bool current_arg_is_shorthand;
@@ -506,18 +538,107 @@ namespace argl {
 				continue;
 			}
 
-			usage += "\t--" + arg.name;
-			if (arg.shorthand != "") {
-				usage += "\t-" + arg.shorthand;
+			std::string line = "    --" + arg.name;
+			if (!arg.shorthand.empty()) {
+				line += "  -" + arg.shorthand;
 			}
-			usage += "\n";
+			if (!arg.description.empty()) {
+				int number_of_spaces_on_first_line = (max_argument_length + 8) - line.size();
+				int number_of_spaces = (max_argument_length + 12);
+				int remaining_line_characters = max_line_width - number_of_spaces;
+
+				/// First line of description
+				for (int j = 0; j < number_of_spaces_on_first_line; j++) {
+					line += ' ';
+				}
+				int last_split_index = arg.description.find(" ", remaining_line_characters);
+				line += arg.description.substr(0, last_split_index) + "\n";
+
+				std::cout << "ns: " << number_of_spaces << " & rlc: " << remaining_line_characters << "\n";
+
+				while (last_split_index < arg.description.size()) {
+					for (int j = 0; j < number_of_spaces; j++) {
+						line += ' ';
+					}
+
+					int split_index = arg.description.find(" ", last_split_index + remaining_line_characters);
+					line += arg.description.substr(last_split_index, split_index - last_split_index);
+					line += '\n';
+					last_split_index = split_index;
+				}
+			}
+			if (line.size() > max_line_width) {
+				std::vector<std::string> lines;
+				for (int i = 0; i < line.size() / max_line_width; i++) {
+
+				}
+			}
+			line += "\n";
+			usage += line;
 		}
 
 		std::cout << usage;
 	}
 
+	void print_argument_values() {
+		for (auto& arg : cpp_arguments) {
+			std::cout << arg.name << ": ";
+			arg.print_value();
+			std::cout << "\n";
+		}
+	}
 
-	void argl::argument::set_value(std::string str) {
+	void argument::print_value() {
+		switch (type) {
+			case argl_string:
+				std::cout << (*((char**)this->value));
+				break;
+			case argl_cppstring:
+				std::cout << *((std::string*)this->value);
+				break;
+			case argl_long:
+				std::cout << *((long*)this->value);
+				break;
+			case argl_double:
+				std::cout << *((double*)this->value);
+				break;
+			case argl_bool:
+				std::cout << *((bool*)this->value);
+				break;
+			default:
+				// Gracefully scream and yell then die
+				fprintf(stderr, "argl internal error: Invalid argument type\n");
+				exit(1);
+		}
+	}
+
+	std::string argument::value_to_string() {
+		std::string out;
+		switch (type) {
+			case argl_string:
+				out = (*((char**)this->value));
+				break;
+			case argl_cppstring:
+				out = *((std::string*)this->value);
+				break;
+			case argl_long:
+				out = *((long*)this->value);
+				break;
+			case argl_double:
+				out = *((double*)this->value);
+				break;
+			case argl_bool:
+				out = *((bool*)this->value);
+				break;
+			default:
+				// Gracefully scream and yell then die
+				fprintf(stderr, "argl internal error: Invalid argument type\n");
+				exit(1);
+		}
+		return out;
+	}
+
+	void argument::set_value(std::string str) {
 		switch (type) {
 			case argl_string:
 				for (int i = 0; i < str.size(); i++) {
