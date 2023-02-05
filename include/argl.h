@@ -332,7 +332,6 @@ namespace argl {
 			if ((name.length() + 2) + (shorthand.length() + 1) > max_argument_length) {
 				max_argument_length = name.length() + 2 + shorthand.length() + 1;
 			}
-			std::cout << "mal: " << max_argument_length << "\n";
 			cpp_arguments.emplace_back(&value, name, shorthand, description);
 		}
 
@@ -552,9 +551,7 @@ namespace argl {
 					line += ' ';
 				}
 				int last_split_index = arg.description.find(" ", remaining_line_characters);
-				line += arg.description.substr(0, last_split_index) + "\n";
-
-				std::cout << "ns: " << number_of_spaces << " & rlc: " << remaining_line_characters << "\n";
+				line += arg.description.substr(0, last_split_index) + '\n';
 
 				while (last_split_index < arg.description.size()) {
 					for (int j = 0; j < number_of_spaces; j++) {
@@ -573,7 +570,6 @@ namespace argl {
 
 				}
 			}
-			line += "\n";
 			usage += line;
 		}
 
